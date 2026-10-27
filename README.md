@@ -34,7 +34,7 @@ No API key or dependency installation is needed. Set `--user-agent` to identify 
 
 ## Data and website discovery
 
-Only restaurants with at least one extracted email address are written to CSV or JSONL. Emails may come from the registry or scanned public pages; both role and review-required addresses qualify. Restaurants without an email are skipped. `--limit` bounds records processed, not the number of email-bearing results, so the exported count may be lower. With `--no-scrape`, only registry emails can qualify.
+All matching restaurants are written to CSV and JSONL, including those without email addresses. Emails may come from the registry or scanned public pages. `--limit` bounds records processed. With `--no-scrape`, only registry emails are collected.
 
 The API source is https://data.brreg.no/enhetsregisteret/api/enheter. Reference: https://data.brreg.no/enhetsregisteret/api/dokumentasjon/no/index.html (NLOD license). Industry prefixes are configurable; the default `56.1` selects restaurant activities. Validate the classification against your intended scope. Catering and bars outside this prefix are excluded. These are legal entities, not necessarily individual restaurant locations. `--limit` caps fetched registry records before local inactive-company filtering, so output can be smaller.
 

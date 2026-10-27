@@ -44,8 +44,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     records = []
     processed = 0
-    skipped_no_email = 0
-    # Flush only companies with email to both output formats.
+    # Flush each completed company to JSONL so interrupted work remains inspectable.
     with output.with_suffix('.jsonl').open('w', encoding='utf-8') as checkpoint:
         for company in deduplicate(filter_restaurants(companies, codes)):
             if processed >= args.limit:
@@ -63,10 +62,6 @@ def main():
             registry_source = company.get('registry_source', '')
             if company.get('epostadresse'):
                 contacts.extend(find_emails(company['epostadresse'], registry_source))
-            if not contacts:
-                skipped_no_email += 1
-                print(f"Skipped: {company.get('navn', '')} (no email found)", flush=True)
-                continue
             address = company.get('beliggenhetsadresse') or company.get('forretningsadresse', {})
             registry_phones = {company[key] for key in ('telefon', 'mobil') if company.get(key)}
             analysis = analyze_website(pages)
@@ -94,8 +89,8 @@ def main():
             print(f"Processed {len(records)}: {record['name']} ({record['status']})", flush=True)
     export_csv(records, output)
     if not records:
-        print('No matching restaurants with email addresses found.')
-    print(f'Exported {len(records)} companies to {output}; skipped {skipped_no_email} without email')
+        print('No matching restaurant records found. Check city spelling or industry codes.')
+    print(f'Exported {len(records)} companies to {output}')
 
 
 if __name__ == '__main__':
