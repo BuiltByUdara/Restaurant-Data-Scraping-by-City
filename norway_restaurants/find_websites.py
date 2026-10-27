@@ -20,6 +20,6 @@ def load_mapping(path):
 
 
 def find_website(company, mapping):
-    org = str(company['organisasjonsnummer'])
+    org = company.get('record_id') or str(company['organisasjonsnummer'])
     value = mapping.get(org) or company.get('hjemmeside')
-    return normalize_url(value), ('mapping' if mapping.get(org) else 'registry') if value else 'unresolved'
+    return normalize_url(value), ('mapping' if mapping.get(org) else company.get('data_source', 'registry')) if value else 'unresolved'

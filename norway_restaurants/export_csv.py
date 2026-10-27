@@ -4,6 +4,7 @@ from pathlib import Path
 
 FIELDS = ['organisasjonsnummer', 'name', 'normalized_name', 'legal_form', 'municipality', 'website', 'website_source', 'status', 'role_emails', 'review_emails', 'phones', 'opportunity_score', 'score_reasons', 'contact_sources', 'errors', 'checked_at']
 FIELDS[5:5] = ['address', 'postal_code', 'city', 'parent_organization', 'registry_source']
+FIELDS += ['record_id', 'data_source', 'country', 'latitude', 'longitude', 'cuisine', 'opening_hours', 'wheelchair', 'takeaway', 'delivery', 'attribution']
 
 
 def export_csv(records, path):

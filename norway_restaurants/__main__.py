@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime, timezone
 import json
+import sys
 from pathlib import Path
 
 from .get_companies import get_companies
@@ -12,22 +13,34 @@ from .analyze_website import analyze_website
 from .deduplicate import deduplicate
 from .export_csv import export_csv
 from .http import Client
+from .worldwide import get_worldwide_restaurants
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Enrich Norwegian restaurant entities from public sources')
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    parser = argparse.ArgumentParser(description='Find and enrich restaurants worldwide from public sources')
     parser.add_argument('--input', help='Local registry JSON array; otherwise use Brreg API')
     parser.add_argument('--websites', help='CSV columns: organisasjonsnummer,website')
     parser.add_argument('--output', default='output/restaurants.csv')
     parser.add_argument('--limit', type=int, default=100)
     parser.add_argument('--codes', default='56.1', help='Comma-separated industry prefixes')
     parser.add_argument('--municipality')
-    parser.add_argument('--city', help='Norwegian city, e.g. Oslo, Bergen, Tromsø; fetch actual establishment records')
+    parser.add_argument('--city', help='City worldwide, e.g. Lisbon, London, Oslo')
+    parser.add_argument('--country', help='Optional two-letter country code, e.g. PT, US, NO')
+    parser.add_argument('--source', choices=('osm', 'brreg'), default='osm', help='City provider: worldwide OSM (default), or Norwegian registry')
+    parser.add_argument('--all', action='store_true', help='Export all returned city records (provider limits still apply)')
     parser.add_argument('--max-pages', type=int, default=6)
     parser.add_argument('--delay', type=float, default=1)
     parser.add_argument('--user-agent', default='NorwayRestaurantResearch/1.0')
     parser.add_argument('--no-scrape', action='store_true')
     args = parser.parse_args()
+    if args.country and (len(args.country) != 2 or not args.country.isalpha()):
+        parser.error('--country must be a two-letter country code')
+    if args.country and (not args.city or args.source != 'osm'):
+        parser.error('--country requires --city with --source osm')
+    if args.all:
+        args.limit = 1_000_000_000
     if args.city and (args.input or args.municipality):
         parser.error('--city cannot be combined with --input or --municipality')
     if args.city is not None and not args.city.strip():
@@ -38,7 +51,12 @@ def main():
     if not codes:
         parser.error('Provide at least one industry code')
     client = Client(delay=args.delay, user_agent=args.user_agent)
-    companies = json.loads(Path(args.input).read_text(encoding='utf-8-sig')) if args.input else get_companies(client, codes, args.municipality, args.limit, city=args.city)
+    worldwide = bool(args.city and args.source == 'osm')
+    if worldwide:
+        companies = get_worldwide_restaurants(client, args.city, args.country, args.limit)
+    else:
+        companies = json.loads(Path(args.input).read_text(encoding='utf-8-sig')) if args.input else get_companies(client, codes, args.municipality, args.limit, city=args.city)
+        companies = filter_restaurants(companies, codes)
     mapping = load_mapping(args.websites)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -46,7 +64,7 @@ def main():
     processed = 0
     # Flush each completed company to JSONL so interrupted work remains inspectable.
     with output.with_suffix('.jsonl').open('w', encoding='utf-8') as checkpoint:
-        for company in deduplicate(filter_restaurants(companies, codes)):
+        for company in deduplicate(companies):
             if processed >= args.limit:
                 break
             processed += 1
@@ -66,6 +84,7 @@ def main():
             registry_phones = {company[key] for key in ('telefon', 'mobil') if company.get(key)}
             analysis = analyze_website(pages)
             record = {
+                **{key: company.get(key, '') for key in ('record_id', 'data_source', 'country', 'latitude', 'longitude', 'cuisine', 'opening_hours', 'wheelchair', 'takeaway', 'delivery', 'attribution')},
                 'organisasjonsnummer': str(company['organisasjonsnummer']),
                 'name': company.get('navn', ''), 'normalized_name': company['normalized_name'],
                 'legal_form': company.get('organisasjonsform', {}).get('kode', ''),

@@ -1,4 +1,24 @@
-# Norwegian restaurant enrichment
+# Worldwide restaurant enrichment
+
+## Worldwide city search
+
+```powershell
+python -m norway_restaurants --city "Lisban" --country PT --all --no-scrape --output output/lisbon.csv
+python -m norway_restaurants --city "Paris" --country FR --limit 100 --output output/paris.csv
+python -m norway_restaurants --city "Oslo" --source brreg --limit 100 --output output/oslo.csv
+```
+
+City search defaults to OpenStreetMap worldwide. `Lisban` is an explicit alias for Lisbon; other names use Nominatim search, and arbitrary misspellings are not guaranteed. The resolved location is printed before retrieval. Use `--country` (two-letter ISO code) or a fuller city name to disambiguate. Add `--source brreg` to the Norwegian city examples below to retain registry lookup. Without `--city`, registry/local-input behavior is unchanged.
+
+`--all` exports all restaurant records returned for the area; the default cap is 100. This means all available mapped results, not every real-world restaurant. Coverage and contact completeness vary. Administrative/mapped boundaries are used when available; otherwise a clearly reported bounding box is used. Only `amenity=restaurant` is selected; cafes, bars, and fast-food-only records are excluded. Different OSM IDs can describe the same venue. Records without emails are included.
+
+Available fields include name, address, country, coordinates, cuisine, opening hours, website, phones, email, wheelchair access, takeaway, delivery, and source link. Missing fields remain empty; ratings/reviews are not supplied. Remove `--no-scrape` to also enrich from public websites, which can take a long time for a whole city.
+
+Data: [© OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL. Attribution is included in export rows. Nominatim is used only for city lookup with disk caching in `output/geocache` and at least one second between requests per process. Run one process at a time against public services. Set `NOMINATIM_URL` and `OVERPASS_URL` to use another provider or your own instance. Public services have capacity and availability limits; see the [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/).
+
+OSM IDs use `record_id`; Norwegian organization numbers remain blank for OSM records. Website mappings may use an OSM record ID in the `organisasjonsnummer` column. `registry_source` contains the source link for either provider.
+
+## Norwegian registry workflow
 
 A Python 3.10+ pipeline using only the standard library. Fetches Brønnøysund registry entities, filters active restaurant companies, normalizes names, resolves known websites, scans public HTML, extracts contact details, scores observed website signals, deduplicates by organization number, and exports CSV plus detailed JSONL.
 
