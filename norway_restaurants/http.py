@@ -27,19 +27,24 @@ class SafeRedirect(HTTPRedirectHandler):
 
 
 class Client:
-    def __init__(self, delay=1.0, timeout=15, user_agent=USER_AGENT):
+    def __init__(self, delay=1.0, timeout=15, user_agent=USER_AGENT, budget=None):
         self.delay, self.timeout, self.user_agent = delay, timeout, user_agent
         self.last_request = 0
         self.opener = build_opener(SafeRedirect())
+        self.deadline = time.monotonic() + budget if budget else None
 
     def get(self, url, max_bytes=2_000_000):
         public_url(url)
         for attempt in range(3):
-            time.sleep(max(0, self.delay - (time.monotonic() - self.last_request)))
+            pause = max(0, self.delay - (time.monotonic() - self.last_request))
+            if self.deadline and time.monotonic() + pause >= self.deadline:
+                raise TimeoutError('Website scan time budget exceeded')
+            time.sleep(pause)
             self.last_request = time.monotonic()
             try:
                 request = Request(url, headers={'User-Agent': self.user_agent, 'Accept': 'application/json,text/html,text/plain'})
-                with self.opener.open(request, timeout=self.timeout) as response:
+                timeout = min(self.timeout, max(0.1, self.deadline - time.monotonic())) if self.deadline else self.timeout
+                with self.opener.open(request, timeout=timeout) as response:
                     data = response.read(max_bytes + 1)
                     if len(data) > max_bytes:
                         raise ValueError('Response exceeds size limit')
@@ -48,4 +53,7 @@ class Client:
                 if exc.code not in (429, 500, 502, 503, 504) or attempt == 2:
                     raise
                 retry = exc.headers.get('Retry-After', '')
-                time.sleep(min(60, int(retry)) if retry.isdigit() else 2 ** attempt)
+                pause = min(60, int(retry)) if retry.isdigit() else 2 ** attempt
+                if self.deadline and time.monotonic() + pause >= self.deadline:
+                    raise TimeoutError('Website retry exceeds scan time budget') from exc
+                time.sleep(pause)

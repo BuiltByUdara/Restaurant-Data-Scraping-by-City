@@ -3,10 +3,11 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from norway_restaurants.analyze_website import analyze_website
 from norway_restaurants.deduplicate import deduplicate
-from norway_restaurants.export_csv import export_csv
+from norway_restaurants.export_csv import export_csv, email_addresses
 from norway_restaurants.filter_restaurants import filter_restaurants, normalize_name
 from norway_restaurants.find_emails import find_emails
 from norway_restaurants.find_websites import normalize_url
@@ -15,6 +16,36 @@ from norway_restaurants.scrape_websites import scrape_website
 
 
 class PipelineTests(unittest.TestCase):
+    def test_cli_requires_email_by_default(self):
+        from norway_restaurants.__main__ import main
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'companies.json'
+            output = Path(directory) / 'out.csv'
+            company = {'organisasjonsnummer': '1', 'navn': 'Test', 'naeringskode1': {'kode': '56.110'}}
+            source.write_text(json.dumps([company, {**company, 'organisasjonsnummer': '2', 'epostadresse': 'info@example.com'}]), encoding='utf-8')
+            argv = ['restaurants', '--input', str(source), '--no-scrape', '--output', str(output)]
+            with patch('sys.argv', argv):
+                main()
+            with output.open(encoding='utf-8-sig', newline='') as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual([row['organisasjonsnummer'] for row in rows], ['2'])
+            self.assertEqual(rows[0]['email'], 'info@example.com')
+            self.assertEqual(len(output.with_suffix('.jsonl').read_text().splitlines()), 1)
+            with patch('sys.argv', argv + ['--include-without-email']):
+                main()
+            with output.open(encoding='utf-8-sig', newline='') as handle:
+                self.assertEqual(len(list(csv.DictReader(handle))), 2)
+
+    def test_email_column_combines_and_deduplicates(self):
+        record = {'role_emails': ['info@example.com'], 'review_emails': ['info@example.com', 'chef@example.com']}
+        self.assertEqual(email_addresses(record), ['chef@example.com', 'info@example.com'])
+        self.assertEqual(email_addresses({}), [])
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'emails.csv'
+            export_csv([record], path)
+            with path.open(encoding='utf-8-sig', newline='') as handle:
+                self.assertEqual(next(csv.DictReader(handle))['email'], 'chef@example.com; info@example.com')
+
     def test_city_uses_physical_establishment_location(self):
         class Fake:
             def __init__(self):

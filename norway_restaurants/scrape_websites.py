@@ -4,7 +4,7 @@ from urllib.robotparser import RobotFileParser
 
 from .find_emails import parse_page
 
-PATHS = ('/', '/contact', '/contact-us', '/kontakt', '/om-oss', '/about')
+PATHS = ('/', '/contact', '/contactos', '/contato', '/contact-us', '/kontakt', '/om-oss', '/about')
 
 
 def scrape_website(client, website, max_pages=6):
@@ -45,7 +45,7 @@ def scrape_website(client, website, max_pages=6):
             pages.append({'url': final, 'html': body})
             for link in parse_page(body).links:
                 candidate = urljoin(final, link)
-                if urlsplit(candidate).netloc == urlsplit(final).netloc and any(word in urlsplit(candidate).path.lower() for word in ('kontakt', 'contact', 'about', 'om-oss')):
+                if urlsplit(candidate).netloc == urlsplit(final).netloc and any(word in urlsplit(candidate).path.lower() for word in ('kontakt', 'contact', 'contato', 'about', 'om-oss', 'sobre')):
                     queue.insert(0, candidate)
         except Exception as exc:
             errors.append({'url': url, 'error': str(exc)})

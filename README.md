@@ -1,5 +1,17 @@
 # Worldwide restaurant enrichment
 
+## Email-required export
+
+Exports now require at least one publicly listed email by default. The `email` column contains addresses separated by semicolons; classification and source URLs remain in their existing columns. Use `--include-without-email` to include other restaurants. No addresses are guessed, and extraction does not verify deliverability or ownership.
+
+For a new city, omit `--no-scrape` to scan restaurant websites. To enrich an existing JSONL export without querying map services again:
+
+```powershell
+python -m norway_restaurants.enrich_export output/lisbon.jsonl --output output/lisbon-with-email.csv
+```
+
+This checks known websites for records lacking emails, saves an email-only CSV/JSONL every ten completed scans, and resumes completed website checks from the sibling `.progress.jsonl` file. Keep a unique output name per source dataset. Websites run concurrently (eight workers by default), with scans sharing a hostname serialized. Progress files include unsuccessful records for diagnostics. Records with no known website cannot be enriched this way. Public sites may block crawling or omit email; such records cannot enter the email-required result.
+
 ## Worldwide city search
 
 ```powershell
@@ -10,7 +22,7 @@ python -m norway_restaurants --city "Oslo" --source brreg --limit 100 --output o
 
 City search defaults to OpenStreetMap worldwide. `Lisban` is an explicit alias for Lisbon; other names use Nominatim search, and arbitrary misspellings are not guaranteed. The resolved location is printed before retrieval. Use `--country` (two-letter ISO code) or a fuller city name to disambiguate. Add `--source brreg` to the Norwegian city examples below to retain registry lookup. Without `--city`, registry/local-input behavior is unchanged.
 
-`--all` exports all restaurant records returned for the area; the default cap is 100. This means all available mapped results, not every real-world restaurant. Coverage and contact completeness vary. Administrative/mapped boundaries are used when available; otherwise a clearly reported bounding box is used. Only `amenity=restaurant` is selected; cafes, bars, and fast-food-only records are excluded. Different OSM IDs can describe the same venue. Records without emails are included.
+`--all` processes all restaurant records returned for the area; the default cap is 100. Only records with email are exported unless `--include-without-email` is set. This means available mapped results, not every real-world restaurant. Coverage and contact completeness vary. Administrative/mapped boundaries are used when available; otherwise a clearly reported bounding box is used. Only `amenity=restaurant` is selected; cafes, bars, and fast-food-only records are excluded. Different OSM IDs can describe the same venue.
 
 Available fields include name, address, country, coordinates, cuisine, opening hours, website, phones, email, wheelchair access, takeaway, delivery, and source link. Missing fields remain empty; ratings/reviews are not supplied. Remove `--no-scrape` to also enrich from public websites, which can take a long time for a whole city.
 
@@ -27,9 +39,9 @@ A Python 3.10+ pipeline using only the standard library. Fetches Brønnøysund r
 ### Get real restaurants by city
 
 ```powershell
-python -m norway_restaurants --city Oslo --limit 100 --output output/oslo.csv
-python -m norway_restaurants --city Bergen --limit 100 --no-scrape --output output/bergen.csv
-python -m norway_restaurants --city "Tromsø" --limit 100 --output output/tromso.csv
+python -m norway_restaurants --city Oslo --source brreg --limit 100 --output output/oslo.csv
+python -m norway_restaurants --city Bergen --source brreg --limit 100 --no-scrape --output output/bergen.csv
+python -m norway_restaurants --city "Tromsø" --source brreg --limit 100 --output output/tromso.csv
 ```
 
 `--city` queries live Brreg establishment records (`underenheter`) by physical location. Municipality names match their full municipality boundary; other names are searched as postal towns. Results contain real registered establishment names, street addresses, postal codes, parent organization IDs, registry links, and available public contact details. The registry does not guarantee a venue is currently open or that every venue has a website/email. `--no-scrape` retrieves registry data quickly without visiting websites. No example records are mixed into live results.
@@ -54,7 +66,7 @@ No API key or dependency installation is needed. Set `--user-agent` to identify 
 
 ## Data and website discovery
 
-All matching restaurants are written to CSV and JSONL, including those without email addresses. Emails may come from the registry or scanned public pages. `--limit` bounds records processed. With `--no-scrape`, only registry emails are collected.
+Only matching restaurants with email are written to CSV and JSONL by default. Set `--include-without-email` to retain all matching records. Emails may come from the registry or scanned public pages. `--limit` bounds records processed, so exported counts can be smaller. With `--no-scrape`, only source-provided emails are collected.
 
 The API source is https://data.brreg.no/enhetsregisteret/api/enheter. Reference: https://data.brreg.no/enhetsregisteret/api/dokumentasjon/no/index.html (NLOD license). Industry prefixes are configurable; the default `56.1` selects restaurant activities. Validate the classification against your intended scope. Catering and bars outside this prefix are excluded. These are legal entities, not necessarily individual restaurant locations. `--limit` caps fetched registry records before local inactive-company filtering, so output can be smaller.
 

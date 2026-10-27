@@ -11,7 +11,7 @@ from .scrape_websites import scrape_website
 from .find_emails import find_emails, parse_page
 from .analyze_website import analyze_website
 from .deduplicate import deduplicate
-from .export_csv import export_csv
+from .export_csv import export_csv, email_addresses
 from .http import Client
 from .worldwide import get_worldwide_restaurants
 
@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--delay', type=float, default=1)
     parser.add_argument('--user-agent', default='NorwayRestaurantResearch/1.0')
     parser.add_argument('--no-scrape', action='store_true')
+    parser.add_argument('--include-without-email', action='store_true', help='Include records without an email; default exports only records with email')
     args = parser.parse_args()
     if args.country and (len(args.country) != 2 or not args.country.isalpha()):
         parser.error('--country must be a two-letter country code')
@@ -103,6 +104,9 @@ def main():
                 'checked_at': datetime.now(timezone.utc).isoformat(),
             }
             records.append(record)
+            if not args.include_without_email and not email_addresses(record):
+                records.pop()
+                continue
             checkpoint.write(json.dumps(record, ensure_ascii=False) + '\n')
             checkpoint.flush()
             print(f"Processed {len(records)}: {record['name']} ({record['status']})", flush=True)
