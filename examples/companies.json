@@ -1,0 +1,10 @@
+[
+  {
+    "organisasjonsnummer": "000000001",
+    "navn": "Eksempel Restaurant AS",
+    "organisasjonsform": {"kode": "AS"},
+    "naeringskode1": {"kode": "56.110"},
+    "forretningsadresse": {"kommune": "OSLO"},
+    "hjemmeside": "https://example.com"
+  }
+]
