@@ -1,5 +1,7 @@
 # Worldwide restaurant scraper and email enrichment
 
+#
+
 Find restaurant records by city, collect publicly listed contact details, and export CSV/JSONL. Worldwide searches use OpenStreetMap; Norwegian registry lookup is also available.
 
 **Only restaurants with an email are exported by default.** The `email` column contains addresses separated by semicolons. Emails are extracted, not guessed or tested for deliverability.
@@ -83,11 +85,11 @@ Use a unique output name for each source dataset. To retry every website, choose
 
 For `--output output/lisbon-emails.csv`:
 
-| File | Purpose |
-| --- | --- |
-| `lisbon-emails.csv` | Spreadsheet-ready records with a readable `email` column |
-| `lisbon-emails.jsonl` | Exported records as JSON, one per line |
-| `lisbon-emails.progress.jsonl` | Enrichment checkpoint, including unsuccessful scans |
+| File                           | Purpose                                                  |
+| ------------------------------ | -------------------------------------------------------- |
+| `lisbon-emails.csv`            | Spreadsheet-ready records with a readable `email` column |
+| `lisbon-emails.jsonl`          | Exported records as JSON, one per line                   |
+| `lisbon-emails.progress.jsonl` | Enrichment checkpoint, including unsuccessful scans      |
 
 Enrichment saves CSV/JSONL at startup, every ten completed checks, and at completion. Checkpoints are flushed after each completed check. The main pipeline writes its CSV at completion and flushes selected JSONL records as it goes. Runs overwrite their chosen CSV/JSONL files.
 
@@ -104,20 +106,20 @@ List/object fields are JSON inside CSV cells. CSV uses UTF-8 with a BOM for Exce
 
 ## Main command options
 
-| Option | Purpose |
-| --- | --- |
-| `--city "Lisbon"` | Search a city worldwide |
-| `--country PT` | Restrict worldwide city lookup by two-letter country code |
-| `--all` | Process all returned records, subject to provider limits |
-| `--limit 100` | Cap processed records; default 100 |
-| `--output output/leads.csv` | Choose CSV filename; default `output/restaurants.csv` |
-| `--include-without-email` | Retain records without emails, especially for discovery |
-| `--no-scrape` | Skip websites and collect only source-provided contacts |
-| `--max-pages 6` | Maximum page attempts per website |
-| `--delay 1` | Delay between main-pipeline requests |
-| `--source brreg` | Use Norwegian registry city lookup |
-| `--websites websites.csv` | Supply verified website mappings |
-| `--user-agent` | Identify main-pipeline requests with your project/contact information |
+| Option                      | Purpose                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `--city "Lisbon"`           | Search a city worldwide                                               |
+| `--country PT`              | Restrict worldwide city lookup by two-letter country code             |
+| `--all`                     | Process all returned records, subject to provider limits              |
+| `--limit 100`               | Cap processed records; default 100                                    |
+| `--output output/leads.csv` | Choose CSV filename; default `output/restaurants.csv`                 |
+| `--include-without-email`   | Retain records without emails, especially for discovery               |
+| `--no-scrape`               | Skip websites and collect only source-provided contacts               |
+| `--max-pages 6`             | Maximum page attempts per website                                     |
+| `--delay 1`                 | Delay between main-pipeline requests                                  |
+| `--source brreg`            | Use Norwegian registry city lookup                                    |
+| `--websites websites.csv`   | Supply verified website mappings                                      |
+| `--user-agent`              | Identify main-pipeline requests with your project/contact information |
 
 Show complete help:
 
